@@ -2,8 +2,10 @@ package jy.test;
 //package weibo4j;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -211,14 +213,9 @@ public class HttpUtil {
 		//"2.00VwpDvC_cCZYCd244d022330gJLza", //dh
 		//"2.00UtRTGDXvWDUB22ab15f1c8_ANJLB", //视频
 		
-		"2.00UtRTGDXvWDUB22ab15f1c8_ANJLB",//girl0001
-		"2.00UtRTGDugCcqD87b8ae16b4AjskZC",//girl0002
-		"2.00UtRTGD0FOnBga52c370a46yhx5cD",//girl0003Y
-		"2.00UtRTGDjswpsD919ee013ab00kOt8",//girl0004Y
-		"2.00UtRTGDfKWhQD033a53256e0hRr9Y",//girl0005Y
   };
 	
-	public static ArrayList<String> nickname_list = new ArrayList<String>();
+	
 	
 	public static void main(String[] args) throws IOException{
 		 
@@ -228,15 +225,18 @@ public class HttpUtil {
 //			count++;
 //			System.out.println(count);
 //		}
-		
-		FileReader fr = new FileReader(PEOPLE);
+		ArrayList<String> weibo = new ArrayList<String>();
+		FileReader fr = new FileReader(WEIBOFILE);
 		BufferedReader br = new BufferedReader(fr);
+		
+		FileWriter fw = new FileWriter("hasSent.txt");
+		BufferedWriter bw = new BufferedWriter(fw);
 		String line = null;
 		while((line = br.readLine()) != null)
 		{
-			nickname_list.add(line);
+			weibo.add(line);
 		}
-		System.out.println(nickname_list.size());
+		System.out.println(weibo.size());
 		int count = 1;
 		fr.close();
 		br.close();
@@ -252,64 +252,54 @@ public class HttpUtil {
 		
 		//sentWithFile("2.00QH1SFENsalnD4a258bb953EWAxGD", 0);
 		int  i=0; //轮换token
-		int  curWeiboPeopleNumber = 0; //本条微博@的人数
-		int  weiboCounter = 1; //微博条数
-		int  nickCounter = 0; //已经@的总人数
+		int  weiboCounter = 0; //微博条数
 		int  index = 0; //临时游标
-		int  excIndex = 0; //异常变量
 		String accessToken="";
-		StringBuilder sb = new StringBuilder();
 		try{
 			while(true)
 			{
 				accessToken=tokenArr[i];
-				sb = new StringBuilder();
 				try {
 				        Map<String, String> params = new HashMap<String, String>();
 				        int curLen =0; //当前微博长度
-				        index = nickCounter;
-				        int nextNicknameLen = nickname_list.get(index).length(); //下一个昵称的长度
-				        while(curLen+nextNicknameLen+1 < MAXLEN-7 && index < nickname_list.size())
-				        {//+2是因为@字符与空格字符
-				        	sb.append("@"+nickname_list.get(index++));
-				        	curLen = sb.length();
-				        }
-				        sb.append("@宏那 "+weiboCounter);
-				        String status = sb.toString();
-				        curWeiboPeopleNumber = index-nickCounter;
+				        index = weiboCounter;
+				        String status = null;
+				        if(index <weibo.size())
+				        	status = weibo.get(index);
 				        
-//				        params.put("access_token", accessToken);
-//				        params.put("status", status);
-//				        params.put("lat", "22.631163467669495");
-//				        params.put("long", "114.04709815979004");
-//				        Map<String, byte[]> itemsMap = new HashMap<String, byte[]>();
-//				        itemsMap.put("pic", readFromURL(IMAGESRC));
-//				        HttpUtil.postMethodRequestWithFile(POST_WEIBO_URL_WITH_IMAGE, params, header, itemsMap);
-//				        Thread.sleep(1000*10);
-				        //====================
-//				        excIndex ++;
-//				        if(excIndex == 31)
-//				        {
-//				        	throw new Exception("发了30条微博 ，要更换token了");	
-//				        }
-				        //=====================
-				        System.out.printf("第%d条微博%n当前@了%d人%n已经@了%d人%n当前微博内容:%s%n%n%n%n", weiboCounter, curWeiboPeopleNumber, index, status);
-					    nickCounter = index;
+				        params.put("access_token", accessToken);
+				        params.put("status", status);
+				        params.put("lat", "23.06151133143498");
+				        params.put("long", "113.39065991863254");
+				        Map<String, byte[]> itemsMap = new HashMap<String, byte[]>();
+				        itemsMap.put("pic", readFromURL(IMAGESRC));
+				        HttpUtil.postMethodRequestWithFile(POST_WEIBO_URL_WITH_IMAGE, params, header, itemsMap);
+				        Thread.sleep(1000*150);
+
+				        System.out.printf("第%d条微博%n", weiboCounter);
+				        System.out.printf("当前微博内容：%n%s%n", status);
+				        bw.append(status);
+				        bw.newLine();
+					    weiboCounter = index;
 					    weiboCounter++;
 					    
-					    if(nickCounter >= nickname_list.size())
+					    if(weiboCounter >= weibo.size())
+					    {
+					    	bw.close();	
 					    	break;
+					    }
 				} catch (Exception e) {
 					e.printStackTrace();
-					System.err.println("本微博发送失败：：：：：：："+sb.toString());
+					System.err.println("%n本微博发送失败：%s%n"+weibo.get(index));
 					System.err.printf("token=%s i=%d%n", tokenArr[i], i);
 					i=(i+1)%tokenArr.length; //更换token
 					//excIndex =0; //刷新异常
+					Thread.sleep(1000*60);
 					if(i==0)
 					{
 						try {
-							System.out.printf("===停下来5分钟等待===%n%n");
-							Thread.sleep(1000*300);
+							System.out.printf("===停下来3分钟等待===%n%n");
+							Thread.sleep(1000*180);
 							
 						} catch (InterruptedException e1) {
 							// TODO Auto-generated catch block
@@ -321,9 +311,9 @@ public class HttpUtil {
 		} catch(Exception e3)
 		{
 			e3.printStackTrace();
-			System.out.printf("===%n%n出大错啦%n%n===%nindex=%d%n", index);
-			System.out.printf("已发微博数:%d%n", weiboCounter);
-			System.out.printf("已@人数：%d%n", nickCounter);
+			bw.close();
+			System.err.printf("===%n%n出大错啦%n%n===%nindex=%d%n", index);
+			System.err.printf("已发微博数:%d%n", weiboCounter);
 		}
 		
 		
@@ -400,4 +390,5 @@ public class HttpUtil {
 	
 	public static final String IMAGESRC = "http://p13.freep.cn/p.aspx?u=v20_p13_photo_1308251334372216_0.jpg";
 	public static final String PEOPLE = "C:\\Users\\Administrator\\Desktop\\洗衣机销售\\ziji.txt";
+	public static final String WEIBOFILE = "weiboList1.txt";
 }
